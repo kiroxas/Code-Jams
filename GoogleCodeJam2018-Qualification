@@ -1,0 +1,387 @@
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <bitset>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <unordered_map>
+#include <cmath>
+#include <map>
+#include <iomanip>
+#include <set>
+
+using namespace std;
+
+/* ------------------------ Problem A : Saving The Universe Again ------------------------------*/
+
+std::vector<int> explode(string seq)
+{
+	std::vector<int> s;
+	int i = 0;
+	s.push_back(0);
+
+	for (char c : seq)
+	{
+		if (c == 'S')
+		{
+			s[i]++;
+		}
+		else
+		{
+			i++;
+			s.push_back(0);
+		}
+	}
+
+	s.shrink_to_fit();
+	return s;
+}
+
+int canReachSolution(const std::vector<int>& seq, int shield)
+{
+	int shoots = 0;
+	for (int s : seq)
+	{
+		shoots += s;
+	}
+
+	// If we swap all the Shoot before all the charge (extreme case)
+	return shield >= shoots;
+}
+
+int getNumb(int nb, int index)
+{
+	return nb * (int)pow(2, index);
+}
+
+int getSolutionCost(const std::vector<int>& seq)
+{
+	int solution = 0;
+
+	for (int i = 0; i < (int)seq.size(); ++i)
+	{
+		solution += getNumb(seq[i], i);
+	}
+
+	return solution;
+}
+
+int getSwapsToReach(std::vector<int>& seq, int gain)
+{
+	int swaps = 0;
+
+	for (int i = seq.size() - 1; i > 0; i--)
+	{
+		int nb = seq[i];
+		int possibleGain = getNumb(nb, i) - getNumb(nb, i - 1);
+		if (possibleGain > gain)
+		{
+			int individualGain = getNumb(1, i) - getNumb(1, i -1);
+			int steps = (int)std::ceil((float)gain / (float)individualGain);
+
+			swaps += steps;
+			// if we ever want to display the solution
+			seq[i] -= steps;
+			seq[i - 1] += steps;
+			return swaps;
+		}
+		else
+		{
+			gain -= possibleGain;
+			swaps += nb;
+			seq[i - 1] += nb;
+			seq[i] = 0;
+		}
+	}
+
+	return swaps;
+}
+
+int solve(std::vector<int>&& seq, int shield)
+{
+	if (canReachSolution(seq, shield) == false)
+	{
+		return -1;
+	}
+
+	int gain = getSolutionCost(seq) - shield;
+
+	if (gain <= 0)
+		return 0;
+
+	return getSwapsToReach(seq, gain);
+}
+
+void solveA(std::istream& in, std::ostream& out)
+{
+	int testCases = 0;
+
+	in >> testCases;
+
+	for (int i = 1; i <= testCases; ++i)
+	{
+		int shield;
+		string sequence;
+
+		in >> shield;
+		in >> sequence;
+
+		int nb = solve(explode(sequence), shield);
+
+		/* Ouput here */
+		out << "Case #" << i << ": ";
+		out << (nb == -1 ? "IMPOSSIBLE" : std::to_string(nb)) << endl;
+	}
+}
+
+/* ------------------------ Problem B : Trouble Sort ------------------------------*/
+
+int isItSorted(std::vector<int>& seq1, std::vector<int>& seq2)
+{
+	std::sort(std::begin(seq1), std::end(seq1));
+	std::sort(std::begin(seq2), std::end(seq2));
+
+	int seq2Size = seq2.size();
+	int seq1Size = seq1.size();
+
+	for (int i = 0; i < seq2Size; ++i)
+	{
+		bool seq1Error = seq1[i] > seq2[i];
+		bool seq2Error = i+1 < seq1Size ? seq2[i] > seq1[i + 1] : false;
+
+		if (seq1Error)
+		{
+			return 2 * i;
+		}
+		else if (seq2Error)
+		{
+			return 2 * i + 1;
+		}
+	}
+
+	return -1;
+}
+
+void solveB(std::istream& in, std::ostream& out)
+{
+	int testCases = 0;
+
+	in >> testCases;
+
+	for (int i = 1; i <= testCases; ++i)
+	{
+		int seqSize;
+
+		in >> seqSize;
+
+		std::vector<int> sequence1;
+		std::vector<int> sequence2;
+		sequence1.reserve(seqSize / 2);
+		sequence2.reserve(seqSize / 2);
+
+		int nb;
+
+		for (int i = 0; i < seqSize; ++i)
+		{
+			in >> nb;
+			if (i % 2 == 0)
+			{
+				sequence1.push_back(nb);
+			}
+			else
+			{
+				sequence2.push_back(nb);
+			}
+		}
+
+		nb = isItSorted(sequence1, sequence2);
+
+		/* Ouput here */
+		out << "Case #" << i << ": ";
+		out << (nb == -1 ? "OK" : std::to_string(nb)) << endl;
+	}
+}
+
+/* ------------------------ Problem C : Go, Gopher ------------------------------*/
+
+struct Position
+{
+	int x;
+	int y;
+};
+
+struct Area
+{
+	Position pos;
+	int density = 0;
+
+	Area(int _x, int _y)
+	{
+		pos.x = _x;
+		pos.y = _y;
+	}
+};
+
+
+struct Orchard
+{
+	std::vector<int> area;
+	int xMax;
+	int yMax;
+
+	Orchard(int _xMax, int _yMax)
+	{
+		xMax = _xMax;
+		yMax = _yMax;
+
+		area = std::vector<int>(xMax * yMax, 0);
+	}
+
+	int getIndex(int x, int y) const
+	{
+		return y * xMax + x;
+	}
+
+	bool positionFilled(Position p) const
+	{
+		return area[getIndex(p.x, p.y)] != 0;
+	}
+
+	bool fillPosition(Position p) 
+	{
+		return area[getIndex(p.x, p.y)] = 1;
+	}
+
+	Position getPosition(int index) const
+	{
+		Position pos;
+		pos.y = index / xMax;
+		pos.x = index - (pos.y * xMax);
+
+		return pos;
+	}
+};
+
+
+void getAreaSize(int area, int& x, int& y)
+{
+	int lowest = (int)std::floor(std::sqrt(area));
+	int higest = (int)std::ceil((float)area / (float)lowest);
+
+	while (lowest * higest < area)
+	{
+		++lowest;
+	}
+
+	x = lowest;
+	y = higest;
+}
+
+void updateAreas(std::vector<Area>& areas, Position given)
+{
+	for (Area& a : areas)
+	{
+		if ((a.pos.x == given.x || a.pos.x == given.x - 1 || a.pos.x == given.x + 1)
+			&& (a.pos.y == given.y || a.pos.y == given.y - 1 || a.pos.y == given.y + 1))
+		{
+			a.density++;
+		}
+	}
+}
+
+int getLesserDensityIndex(const std::vector<Area>& areas)
+{
+	int index = 0;
+	int min = areas[index].density;
+
+	for (int i = 1; i < (int)areas.size(); ++i)
+	{
+		int d = areas[i].density;
+		if (d < min)
+		{
+			min = d;
+			index = i;
+		}
+	}
+
+	return index;
+}
+
+
+void gogopher(std::istream& in, std::ostream& out, int area, int xOffset, int yOffset)
+{
+	int x, y;
+
+	getAreaSize(area, x, y);
+
+	/* So we need to fill this x*y area */
+	Orchard orchard(x, y);
+	std::vector<Area> areas;
+	for (int xs = 1; xs < x - 1; ++xs)
+	{
+		for (int ys = 1; ys < y - 1; ++ys)
+		{
+			areas.emplace_back(Area(xs, ys));
+		}
+	}
+
+	while (true)
+	{
+		const Area& lesser = areas[getLesserDensityIndex(areas)];
+		out << lesser.pos.x + xOffset << " " << lesser.pos.y + yOffset << endl;
+
+		Position given;
+		in >> given.x >> given.y;
+
+		if (given.x == 0 && given.y == 0)
+		{
+			std::cerr << "We solved one" << endl;
+			return; // solved
+		}
+		else if (given.x == -1 && given.y == -1)
+		{
+			std::terminate(); // We failed !
+		}
+
+		given.x -= xOffset;
+		given.y -= yOffset;
+
+		if (orchard.positionFilled(given) == false)
+		{
+			orchard.fillPosition(given);
+			updateAreas(areas, given);
+		}
+	}
+}
+
+void solveC(std::istream& in, std::ostream& out)
+{
+	int testCases = 0;
+
+	in >> testCases;
+
+	for (int i = 1; i <= testCases; ++i)
+	{
+		int area;
+
+		in >> area;
+
+		gogopher(in, out, area, 5, 5);
+	}
+}
+
+/* Problem "Saving The universe" : Song listened to "Yoshimi Battles The Pink Robots Part 1" by The Flaming Lips */
+/* Problem "Trouble Sort" : Song listened to "Learn me right" by Mumford & sons */
+/* Problem "Go, gopher" : Song listened to "Lovers in Japan" by Coldplay */
+
+int main()
+{
+	/*ifstream inputFile("input.in");
+	ofstream outputFile("output_2017.txt");*/
+
+	solveC(std::cin, std::cout);
+
+	return 0;
+}
+

@@ -1,0 +1,153 @@
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <bitset>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <unordered_map>
+#include <cmath>
+#include <map>
+#include <iomanip>
+#include <set>
+#include <functional>
+
+using namespace std;
+
+/* ------------------------ Problem A : Saving The Universe Again ------------------------------*/
+void calculate(int indF, int size, const std::vector<int>& contiSec, std::map<std::pair<int, int>, int>& solution)
+{
+	int fristMin = indF;
+	int firstMax = indF + size - 1;
+
+	int searchMin = fristMin - 1;
+	int searchMax = firstMax + 1;
+
+	int ind = 0;
+	int end = 0;
+	for (const int c : contiSec)
+	{
+		end = ind + c - 1;
+		if ((ind >= searchMin && ind <= searchMax)
+			|| (end >= searchMin && end <= searchMax))
+		{
+			int secondMin = ind;
+			int secondMax = ind + c - 1;
+
+			int totalMin = std::min(fristMin, secondMin);
+			int totalMax = std::max(firstMax, secondMax);
+
+			solution[std::make_pair(totalMin, totalMax)] = (totalMax - totalMin) + 1;
+		}
+		else if (ind > searchMax)
+		{
+			return;
+		}
+		ind += c;
+	}
+}
+
+void countCountiguous(const std::vector<std::pair<long long, long long>>& vec, std::vector<int>& contiFirst, std::vector<int>& contiSec)
+{
+	int cpt = 1;
+	for (int i = 1; i < (int)vec.size(); ++i)
+	{
+		if (vec[i].first == vec[i - 1].first)
+		{
+			++cpt;
+		}
+		else
+		{
+			contiFirst.push_back(cpt);
+			cpt = 1;
+		}
+	}
+	contiFirst.push_back(cpt);
+
+	cpt = 1;
+	for (int i = 1; i < (int)vec.size(); ++i)
+	{
+		if (vec[i].second == vec[i - 1].second)
+		{
+			++cpt;
+		}
+		else
+		{
+			contiSec.push_back(cpt);
+			cpt = 1;
+		}
+	}
+	contiSec.push_back(cpt);
+}
+
+std::map<std::pair<int, int>, int> solveContiguous(const std::vector<int>& contiFirst, const std::vector<int>& contiSec)
+{
+	std::map<std::pair<int, int>, int> solution;
+
+	int indF = 0;
+	for (const int c : contiFirst)
+	{
+		calculate(indF,  c, contiSec, solution);
+
+		indF += c;
+	}
+
+	return solution;
+}
+
+void solveB(std::istream& in, std::ostream& out)
+{
+	int testCases = 0;
+
+	in >> testCases;
+
+	for (int i = 1; i <= testCases; ++i)
+	{
+		int roadSigns;
+
+		in >> roadSigns;
+
+		std::vector<std::pair<long long, long long>> signs(roadSigns);
+		
+		for (int j = 0; j < roadSigns; ++j)
+		{
+			long long d, a, b;
+
+			in >> d;
+			in >> a;
+			in >> b;
+
+			signs[j] = std::make_pair(d+a, d- b);
+		}
+
+		std::vector<int> contiFirst;
+		std::vector<int> contiSec;
+
+		countCountiguous(signs, contiFirst, contiSec);
+
+		auto solution = solveContiguous(contiFirst, contiSec);
+
+		int max = std::max_element(solution.begin(), solution.end(), [](const auto& p1, const auto& p2) {
+			return p1.second < p2.second; })->second;
+
+		int response = std::count_if(solution.begin(), solution.end(), [max](const auto& p1) { return p1.second == max;});
+		
+		out << "Case #" << i << ": " << max << " " << response << endl;
+	}
+
+	out << endl;
+}
+
+/* Problem "Mysterious Road Signs" : Song listened to "Hey Lyla" by Oasis */
+
+int main()
+{
+	ifstream inputFile("input.in");
+	ofstream outputFile("output_2017.txt");
+
+	solveB(inputFile, outputFile);
+	//solveB(std::cin, std::cout);
+
+	return 0;
+}
+
